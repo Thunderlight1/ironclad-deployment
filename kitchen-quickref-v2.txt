@@ -1,0 +1,13 @@
+
+=========================================
+🔧 OPTIMIZATION SCRIPTS AVAILABLE:
+=========================================
+01-docker-cleanup.sh - Clean unused Docker resources
+02-backup-rotation.sh - Smart backup rotation
+03-resource-monitor.sh - CPU/Memory/Disk alerts
+04-performance-tuning.sh - System performance tuning
+
+📚 RECOMMENDED RECIPES:
+=========================================
+Run: /opt/ironclad-stack/scripts/recipe-recommendations.sh
+=========================================

@@ -1,0 +1,59 @@
+========================================
+Ironclad Stack - API Commands Reference
+========================================
+
+GITHUB API TOKEN CREATION:
+-------------------------
+Option 1 - Using GitHub CLI (recommended):
+  /opt/ironclad-stack/scripts/github/create-github-token.sh
+
+Option 2 - Manual token creation:
+  1. Go to https://github.com/settings/tokens
+  2. Click "Generate new token (classic)"
+  3. Select scopes: repo, workflow, write:packages
+  4. Copy the token
+
+PROXMOX API TOKEN CREATION:
+--------------------------
+Option 1 - On Proxmox host:
+  /opt/ironclad-stack/scripts/github/create-proxmox-token.sh
+
+Option 2 - Manual token creation (SSH to Proxmox):
+  pveum role add IroncladProv -privs "VM.Allocate VM.Clone VM.Config.CPU VM.Config.Memory VM.Config.Disk VM.PowerMgmt"
+  pveum user add ironclad-prov@pve --comment "Ironclad Automation"
+  pveum user token add ironclad-prov@pve ironclad-token --privsep 0
+  pveum aclmod / -user ironclad-prov@pve -role IroncladProv
+
+STORE TOKENS IN OPENBAO:
+------------------------
+GitHub:
+  docker exec openbao bao kv put secret/ironclad/github_token value="YOUR_TOKEN"
+  docker exec openbao bao kv put secret/ironclad/github_username value="YOUR_USERNAME"
+  docker exec openbao bao kv put secret/ironclad/github_repo value="YOUR_REPO_URL"
+  docker exec openbao bao kv put secret/ironclad/git_user_name value="YOUR_NAME"
+  docker exec openbao bao kv put secret/ironclad/git_user_email value="YOUR_EMAIL"
+
+Proxmox:
+  docker exec openbao bao kv put secret/ironclad/proxmox_token value="USER@REALM!TOKENID=SECRET"
+  docker exec openbao bao kv put secret/ironclad/proxmox_host value="YOUR_PROXMOX_IP"
+  docker exec openbao bao kv put secret/ironclad/proxmox_user value="ironclad-prov@pve"
+  docker exec openbao bao kv put secret/ironclad/proxmox_node value="YOUR_NODE_NAME"
+
+VIEW STORED SECRETS:
+-------------------
+  /opt/ironclad-stack/scripts/github/view-secrets.sh
+
+PUSH TO GITHUB:
+--------------
+  /opt/ironclad-stack/scripts/github/secure-push.sh
+
+CRON JOBS (Auto-cleanup):
+------------------------
+  crontab -l  # View current jobs
+  crontab -e  # Edit jobs
+
+Current jobs:
+  0 2 * * * /opt/ironclad-stack/scripts/optimizations/01-docker-cleanup.sh
+  0 3 * * * /opt/ironclad-stack/scripts/optimizations/02-backup-rotation.sh
+  */15 * * * * /opt/ironclad-stack/scripts/optimizations/03-resource-monitor.sh
+  0 * * * * /opt/ironclad-stack/scripts/health-check.sh

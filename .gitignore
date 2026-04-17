@@ -1,0 +1,7 @@
+credentials.json
+.env
+*.log
+.openbao-token
+backups/
+*.tmp
+.secrets/

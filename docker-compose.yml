@@ -1,0 +1,175 @@
+version: '3.8'
+
+networks:
+  proxy:
+    external: true
+  internal:
+    external: true
+
+services:
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--api.dashboard=true"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localdomain`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+  # Homepage Dashboard
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    volumes:
+      - ./homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`home.localdomain`)"
+
+  # Homarr Dashboard
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    restart: unless-stopped
+    volumes:
+      - ./homarr/config:/app/data/configs
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homarr.rule=Host(`homarr.localdomain`)"
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.localdomain`)"
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=ironclad123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.localdomain`)"
+
+  # OpenWebUI
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+    restart: unless-stopped
+    volumes:
+      - ./openwebui/data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=ironclad-secret-key
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openwebui.rule=Host(`chat.localdomain`)"
+
+  # Ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ./ollama/data:/root/.ollama
+    networks:
+      - internal
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  # LibreNMS
+  librenms:
+    image: librenms/librenms:latest
+    container_name: librenms
+    restart: unless-stopped
+    volumes:
+      - ./librenms/data:/data
+    networks:
+      - proxy
+    depends_on:
+      - librenms-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.librenms.rule=Host(`monitor.localdomain`)"
+
+  librenms-db:
+    image: mariadb:10
+    container_name: librenms-db
+    restart: unless-stopped
+    volumes:
+      - ./librenms/db:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=librenms
+      - MYSQL_USER=librenms
+      - MYSQL_PASSWORD=librenms123
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+    networks:
+      - internal
+
+  # Zabbix Agent
+  zabbix-agent:
+    image: zabbix/zabbix-agent:latest
+    container_name: zabbix-agent
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - ZBX_HOSTNAME=ironclad-node
+      - ZBX_SERVER_HOST=zabbix.localdomain
+      - ZBX_SERVER_PORT=10050
+
+  # Wazuh Agent
+  wazuh-agent:
+    image: wazuh/wazuh-agent:latest
+    container_name: wazuh-agent
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - WAZUH_MANAGER=wazuh.localdomain
+      - WAZUH_AGENT_NAME=ironclad-node
+    volumes:
+      - /var/log:/var/log:ro
+
+volumes:
+  prometheus_data:
+  grafana_data:

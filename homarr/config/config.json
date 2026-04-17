@@ -1,0 +1,12 @@
+{
+  "appearance": {
+    "theme": "dark"
+  },
+  "services": [
+    {"name": "OpenWebUI", "url": "http://chat.localdomain", "icon": "openwebui"},
+    {"name": "Grafana", "url": "http://grafana.localdomain", "icon": "grafana"},
+    {"name": "Prometheus", "url": "http://prometheus.localdomain", "icon": "prometheus"},
+    {"name": "Homepage", "url": "http://home.localdomain", "icon": "homepage"},
+    {"name": "LibreNMS", "url": "http://monitor.localdomain", "icon": "librenms"}
+  ]
+}
